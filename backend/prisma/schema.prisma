@@ -1,0 +1,48 @@
+// Prisma schema for the AI Ticket Workspace
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Ticket {
+  id            String    @id @default(uuid())
+  customerName  String    @map("customer_name")
+  requestText   String    @map("request_text")
+  attachmentUrl String?   @map("attachment_url")
+
+  // Fields produced by the AI classifier
+  category String?
+  priority String?
+  summary  String?
+
+  // Workflow fields
+  status   String  @default("Open")
+  owner    String?
+  aiStatus String  @default("pending") @map("ai_status") // pending | processing | done | failed
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  comments Comment[]
+
+  @@map("tickets")
+}
+
+model Comment {
+  id       String @id @default(uuid())
+  ticketId String @map("ticket_id")
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  author String
+  body   String
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("comments")
+}
