@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../db.js';
+import { runClassification } from '../ai/classify.js';
+import { isAiConfigured } from '../ai/llm.js';
 
 const router = Router();
 
@@ -37,7 +39,8 @@ const commentSchema = z.object({
 
 // ---- Routes -------------------------------------------------------------
 
-// Create a ticket
+// Create a ticket, then classify it with the AI before responding.
+// If the AI is unconfigured or fails, the ticket is still created.
 router.post(
   '/',
   wrap(async (req, res) => {
@@ -49,7 +52,8 @@ router.post(
         attachmentUrl: data.attachmentUrl || null,
       },
     });
-    res.status(201).json(ticket);
+    const classified = await runClassification(ticket.id);
+    res.status(201).json(classified);
   })
 );
 
@@ -107,6 +111,26 @@ router.post(
       data: { ticketId: req.params.id, author: data.author, body: data.body },
     });
     res.status(201).json(comment);
+  })
+);
+
+// Manually (re)trigger AI classification for a ticket.
+router.post(
+  '/:id/classify',
+  wrap(async (req, res) => {
+    if (!isAiConfigured()) {
+      return res
+        .status(503)
+        .json({ error: 'AI is not configured. Set LLM_API_KEY.' });
+    }
+    const exists = await prisma.ticket.findUnique({
+      where: { id: req.params.id },
+      select: { id: true },
+    });
+    if (!exists) return res.status(404).json({ error: 'Ticket not found' });
+
+    const ticket = await runClassification(req.params.id);
+    res.json(ticket);
   })
 );
 

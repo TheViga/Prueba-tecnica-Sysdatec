@@ -1,8 +1,8 @@
 # AI Ticket Workspace
 
 A lightweight, AI-powered ticket management system. Users create operational
-tickets, an LLM (Qwen via Alibaba DashScope) classifies them by category and
-priority and writes a short summary, and a dashboard tracks their status.
+tickets, an LLM classifies them by category and priority and writes a short
+summary, and a dashboard tracks their status.
 
 Built for the Sysdatec technical challenge.
 
@@ -13,7 +13,7 @@ Built for the Sysdatec technical challenge.
 | Frontend | React + Vite + Tailwind        |
 | Backend  | Node.js + Express + Prisma ORM |
 | Database | PostgreSQL 16                  |
-| AI       | Qwen via Alibaba DashScope     |
+| AI       | gpt-oss-120b via Cerebras (OpenAI-compatible) |
 | Runtime  | Docker Compose                 |
 
 ## Architecture
@@ -26,11 +26,11 @@ Built for the Sysdatec technical challenge.
                               │ HTTPS
                               ▼
                      ┌──────────────────┐
-                     │  Qwen / DashScope│
+                     │   LLM provider   │
                      └──────────────────┘
 ```
 
-The backend is the only service that talks to PostgreSQL and to Qwen, so the
+The backend is the only service that talks to PostgreSQL and to the LLM, so the
 AI API key never reaches the browser.
 
 ## Getting started
@@ -68,6 +68,7 @@ Base URL: `http://localhost:3004`
 | GET    | `/api/tickets/:id`          | Get a ticket with its comments|
 | PATCH  | `/api/tickets/:id`          | Update `status` and/or `owner`|
 | POST   | `/api/tickets/:id/comments` | Add a comment                 |
+| POST   | `/api/tickets/:id/classify` | Re-run AI classification      |
 
 ### Examples
 
@@ -93,7 +94,25 @@ curl -X PATCH http://localhost:3004/api/tickets/<id> \
 curl -X POST http://localhost:3004/api/tickets/<id>/comments \
   -H "Content-Type: application/json" \
   -d '{ "author": "Maria", "body": "Looking into this now." }'
+
+# Re-run AI classification
+curl -X POST http://localhost:3004/api/tickets/<id>/classify
 ```
+
+## AI classification
+
+When a ticket is created the backend sends the request to the LLM through an
+OpenAI-compatible API and stores the returned `category`, `priority` and
+`summary`. The `ai_status` field tracks the lifecycle
+(`pending` -> `processing` -> `done` / `failed`). The provider is configured in
+`.env` (`LLM_BASE_URL` / `LLM_MODEL`); the default is `gpt-oss-120b` on
+Cerebras, but any OpenAI-compatible provider (OpenRouter, DashScope, etc.) works
+by changing those two values.
+
+Classification needs a valid `LLM_API_KEY` in `.env`. Without a key, tickets
+are still created normally and `ai_status` stays `pending`. If a classification
+call fails, the ticket is kept and marked `failed`, so the AI never blocks
+ticket creation. Use `POST /api/tickets/:id/classify` to (re)run it manually.
 
 ## Data model
 

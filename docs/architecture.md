@@ -3,27 +3,26 @@
 ## Goal
 
 An AI-powered ticket workspace that receives operational requests, classifies
-them with an LLM (Qwen via Alibaba DashScope), and tracks their status through
-a dashboard and a detail view. The whole stack runs with
-`docker compose up --build`.
+them with an LLM, and tracks their status through a dashboard and a detail view.
+The whole stack runs with `docker compose up --build`.
 
 ## Tech stack
 
 - **Frontend:** React + Vite + Tailwind
 - **Backend:** Node.js + Express + Prisma ORM
 - **Database:** PostgreSQL 16
-- **AI:** Qwen via Alibaba DashScope (OpenAI-compatible API)
+- **AI:** LLM through an OpenAI-compatible API (default: gpt-oss-120b on Cerebras)
 - **Runtime:** Docker Compose
 
 ## Components
 
 Three containers. The backend is the only service that talks to PostgreSQL and
-Qwen, keeping the AI API key server-side.
+the LLM, keeping the AI API key server-side.
 
 ```
 frontend (React) ──HTTP──▶ backend (Express :3004) ──SQL──▶ PostgreSQL
                                      │
-                                     └──HTTPS──▶ Qwen / DashScope
+                                     └──HTTPS──▶ LLM (OpenAI-compatible API)
 ```
 
 The backend runs on port **3004** and Postgres is mapped to host port **5434**
@@ -59,17 +58,19 @@ to avoid clashing with services that commonly occupy 3000/3001/5432.
 - `GET  /api/tickets/:id` — detail + comments
 - `PATCH /api/tickets/:id` — update status / owner
 - `POST /api/tickets/:id/comments` — add comment
+- `POST /api/tickets/:id/classify` — re-run AI classification
 
 Validation is handled with zod. A centralized Express error handler maps
 validation errors to 400 and missing records to 404.
 
 ## AI classification
 
-When a ticket is created, the backend calls Qwen with a structured prompt that
-asks for `{ category, priority, summary }` as JSON. The result is persisted on
-the ticket and `ai_status` moves `pending -> processing -> done` (or `failed`
-on error, so a bad AI call never blocks ticket creation). The OpenAI-compatible
-DashScope endpoint lets the standard OpenAI SDK be pointed at `QWEN_BASE_URL`.
+When a ticket is created, the backend calls the LLM with a structured prompt
+that asks for `{ category, priority, summary }` as JSON. The result is persisted
+on the ticket and `ai_status` moves `pending -> processing -> done` (or `failed`
+on error, so a bad AI call never blocks ticket creation). Because the provider
+exposes an OpenAI-compatible endpoint, the standard OpenAI SDK is simply pointed
+at `LLM_BASE_URL`, which keeps the integration provider-agnostic.
 
 ## Error handling
 
@@ -82,6 +83,6 @@ DashScope endpoint lets the standard OpenAI SDK be pointed at `QWEN_BASE_URL`.
 
 1. The user submits a ticket from the React form.
 2. The backend validates the payload and stores the ticket.
-3. The backend asks Qwen to classify the request and updates the ticket.
+3. The backend asks the LLM to classify the request and updates the ticket.
 4. The dashboard lists all tickets; the detail view allows status changes,
    owner assignment and comments.

@@ -22,9 +22,9 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-tickets}
       PORT: 3004
 
-      QWEN_API_KEY: ${QWEN_API_KEY:-}
-      QWEN_BASE_URL: ${QWEN_BASE_URL:-https://dashscope-intl.aliyuncs.com/compatible-mode/v1}
-      QWEN_MODEL: ${QWEN_MODEL:-qwen-plus}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.cerebras.ai/v1}
+      LLM_MODEL: ${LLM_MODEL:-gpt-oss-120b}
     ports:
       - "3004:3004"
     depends_on:
