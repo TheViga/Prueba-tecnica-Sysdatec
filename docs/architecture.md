@@ -8,7 +8,7 @@ The whole stack runs with `docker compose up --build`.
 
 ## Tech stack
 
-- **Frontend:** React + Vite + Tailwind
+- **Frontend:** React + Vite + Tailwind CSS, served as static files by nginx
 - **Backend:** Node.js + Express + Prisma ORM
 - **Database:** PostgreSQL 16
 - **AI:** LLM through an OpenAI-compatible API (default: gpt-oss-120b on Cerebras)
@@ -16,17 +16,22 @@ The whole stack runs with `docker compose up --build`.
 
 ## Components
 
-Three containers. The backend is the only service that talks to PostgreSQL and
-the LLM, keeping the AI API key server-side.
+Three containers. The browser only ever talks to nginx; nginx serves the built
+React app and proxies `/api` to the backend, so there are no CORS headers and no
+backend port baked into the client. The backend is the only service that talks
+to PostgreSQL and the LLM, keeping the AI API key server-side.
 
 ```
-frontend (React) ──HTTP──▶ backend (Express :3004) ──SQL──▶ PostgreSQL
-                                     │
-                                     └──HTTPS──▶ LLM (OpenAI-compatible API)
+browser ──▶ frontend (nginx :5173)
+                  │  serves the React SPA
+                  └──/api──▶ backend (Express :3004) ──SQL──▶ PostgreSQL
+                                       │
+                                       └──HTTPS──▶ LLM (OpenAI-compatible API)
 ```
 
-The backend runs on port **3004** and Postgres is mapped to host port **5434**
-to avoid clashing with services that commonly occupy 3000/3001/5432.
+The web app is on host port **5173**, the backend on **3004**, and Postgres is
+mapped to host port **5434** to avoid clashing with services that commonly
+occupy 3000/3001/5432.
 
 ## Data model
 
@@ -50,6 +55,15 @@ to avoid clashing with services that commonly occupy 3000/3001/5432.
 - `body` (text)
 - `created_at` (timestamptz)
 
+**agents** (support team, seeded on startup)
+- `id` (uuid, PK)
+- `name` (text)
+- `email` (text, unique)
+- `created_at` (timestamptz)
+
+A ticket's `owner` holds the chosen agent's name, so the dashboard can offer a
+dropdown of the seeded team while keeping the tickets table self-contained.
+
 ## API
 
 - `GET  /api/health`
@@ -59,6 +73,7 @@ to avoid clashing with services that commonly occupy 3000/3001/5432.
 - `PATCH /api/tickets/:id` — update status / owner
 - `POST /api/tickets/:id/comments` — add comment
 - `POST /api/tickets/:id/classify` — re-run AI classification
+- `GET  /api/agents` — list the support team
 
 Validation is handled with zod. A centralized Express error handler maps
 validation errors to 400 and missing records to 404.

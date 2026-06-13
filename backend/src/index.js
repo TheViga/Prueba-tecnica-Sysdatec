@@ -4,6 +4,8 @@ import cors from 'cors';
 import { ZodError } from 'zod';
 
 import ticketsRouter from './routes/tickets.js';
+import agentsRouter from './routes/agents.js';
+import { seedAgents } from './seed.js';
 
 const app = express();
 
@@ -16,6 +18,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api/tickets', ticketsRouter);
+app.use('/api/agents', agentsRouter);
 
 // 404 for unknown routes
 app.use((_req, res) => {
@@ -42,3 +45,6 @@ const PORT = process.env.PORT || 3004;
 app.listen(PORT, () => {
   console.log(`Backend listening on http://localhost:${PORT}`);
 });
+
+// Make sure the support team is in place before the first assignment.
+seedAgents().catch((err) => console.error('Agent seed failed:', err.message));

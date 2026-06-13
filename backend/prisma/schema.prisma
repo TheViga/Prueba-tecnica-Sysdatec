@@ -46,3 +46,14 @@ model Comment {
 
   @@map("comments")
 }
+
+// Support staff who can be assigned as a ticket owner. Seeded on startup.
+model Agent {
+  id    String @id @default(uuid())
+  name  String
+  email String @unique
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("agents")
+}

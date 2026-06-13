@@ -38,7 +38,11 @@ Schema:
 
 Pick the closest category. Use priority "High" for urgent, blocking or
 financially/legally sensitive issues, "Low" for routine requests, "Medium"
-otherwise.`;
+otherwise.
+
+Write the "summary" in the same language as the request text (e.g. a Spanish
+request gets a Spanish summary). The "category" and "priority" values must
+always stay exactly as written in the schema, in English.`;
 
 // Best-effort extraction of a JSON object from a model response.
 function parseJson(text) {
